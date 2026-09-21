@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -20,6 +21,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .client import GatewayClient, GatewayClientError
+from .assistant import Assistant
 from .telegram_ui import ButtonSessions, MessageCard, actions, plain_markup, product_label, package_label
 from .graph_demo import handle_graph_demo
 from .identity import (
@@ -227,6 +229,7 @@ _LLM_CODE_USAGE = "Usage: /llm_code <six-digit code>"
 _EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 _client_factory: Callable[[], GatewayClient] = GatewayClient.from_env
+_natural_assistant = Assistant()
 _telegram_api_opener: Callable[..., object] = urlopen
 _photon_api_opener: Callable[..., object] = urlopen
 _background_runner: Callable[[Callable[[], None]], None]
@@ -1102,6 +1105,11 @@ def _handle_pre_gateway_dispatch(*, event, gateway=None, **kwargs):
 
     telegram_command = _telegram_public_command(event, source)
     if telegram_command:
+        _natural_assistant.clear(getattr(source, "user_id", ""))
+        assistant_user_id = str(getattr(source, "user_id", ""))
+        with _TELEGRAM_OPERATION_LOCK:
+            if _TELEGRAM_ACTIVE_OPERATIONS.get(assistant_user_id, (None, ""))[1].startswith("assistant:classify:"):
+                _invalidate_telegram_operation(assistant_user_id)
         return _handle_telegram_public_command_request(
             command=telegram_command,
             args=_telegram_command_args(event),
@@ -1148,6 +1156,12 @@ def _handle_pre_gateway_dispatch(*, event, gateway=None, **kwargs):
             source=source,
             gateway=gateway,
         )
+
+    assistant_result = _natural_assistant.handle(
+        event=event, source=source, gateway=gateway, api=sys.modules[__name__],
+    )
+    if assistant_result:
+        return assistant_result
 
     shortcut = _handle_telegram_shop_shortcut(event=event, source=source, gateway=gateway)
     if shortcut:
@@ -2054,6 +2068,7 @@ def _handle_telegram_global_navigation_message(*, event, source, gateway):
     if _chat_setup(str(identity.user_id), source) or str(identity.user_id) in _CHAT_MODEL_PENDING:
         return None
     _invalidate_telegram_operation(str(identity.user_id))
+    _natural_assistant.clear(identity.user_id)
     _BITREFILL_SESSIONS.pop(str(identity.user_id), None)
     _WITHDRAW_SESSIONS.pop(str(identity.user_id), None)
     _IMESSAGE_CONNECT_SESSIONS.pop(str(identity.user_id), None)
@@ -2698,6 +2713,12 @@ def _handle_telegram_bitrefill_wizard_message(*, event, source, gateway):
     if not session:
         return None
 
+    assistant_result = _natural_assistant.handle(
+        event=event, source=source, gateway=gateway, api=sys.modules[__name__],
+    )
+    if assistant_result:
+        return assistant_result
+
     text = str(getattr(event, "text", "") or "").strip()
     if not text:
         return None
@@ -2982,7 +3003,8 @@ def _handle_bitrefill_country_input(*, identity: TelegramIdentity, text: str, so
     return dict(_SKIP_RESULT)
 
 
-def _handle_bitrefill_search_input(*, identity: TelegramIdentity, query: str, source, gateway):
+def _handle_bitrefill_search_input(*, identity: TelegramIdentity, query: str, source, gateway,
+                                 search_all_countries: bool = True):
     user_id = str(identity.user_id)
     country = _bitrefill_country(user_id)
     clean_query = str(query or "").strip()
@@ -3008,7 +3030,7 @@ def _handle_bitrefill_search_input(*, identity: TelegramIdentity, query: str, so
         result = client.search_bitrefill_products(
             query=clean_query,
             country=country,
-            search_all_countries=True,
+            search_all_countries=search_all_countries,
             include_test_products=False,
         )
         products = _filter_bitrefill_search_products(

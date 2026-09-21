@@ -69,6 +69,99 @@ Both services are healthy; Telegram API confirms the six-command native Menu.
 No live inference or purchase was performed for verification.
 [Deployment details](docs/conversation-ui-checks.md#existing-vps-bot-updated).
 
+### September 20: optional natural-language routing (local verification)
+
+[619ec8c](https://github.com/bubon-ik/singit-solana/commit/619ec8c) adds a
+TypeSafe-based entry point to the imported Telegram plugin. Ordinary messages
+can select existing catalog and read-only wallet workflows without first
+opening Venice chat. Direct delivery, physical-goods and booking requests
+offer gift cards only as a separately accepted alternative. This is application
+routing work, not a new Solana payment integration.
+
+All 313 plugin tests passed locally (284 existing plus 29 new), using mocked
+provider responses. No live TypeSafe request, bot deployment or purchase was
+performed. The feature is disabled by default. Semantic accuracy, product
+matching beyond catalog categories, and reconciliation with the deployed bot
+remain unverified. See [setup and limitations](docs/natural-language-assistant.md).
+
+### September 21: TypeSafe validation against the deployed code
+
+The natural-language routing work was integrated with `venice-solana` at
+`337e777` plus its documentation follow-up `8a5de52`. All 375 plugin tests
+passed using the VPS bot's actual runtime, including native Telegram checks.
+Seven synthetic live TypeSafe requests returned the expected decisions in
+0.60–0.71 seconds. This verifies the configured API key and a small sample of
+intents; it is not a production accuracy benchmark. No purchase or wallet
+payment was performed. Pending chat setup and genuine Venice conversation
+remain supported. See [verification details](docs/natural-language-assistant.md).
+
+Release [`adca498`](https://github.com/bubon-ik/singit-solana/commit/adca498),
+[PR #4](https://github.com/bubon-ik/singit-solana/pull/4), is now installed on the
+existing bot. All six applicable CI checks passed. Private backups and state
+comparison confirmed preservation of 95 Base wallets, 1 Solana wallet, bot
+configuration values and purchase history. Only the Telegram service restarted;
+the payment gateway remained running. An initial formatting-only `.env`
+difference triggered a code rollback; a second attempt verified parsed values
+and completed successfully. Real Telegram conversations remain a manual check.
+
+### September 21: conversation routing corrections
+
+[PR #4](https://github.com/bubon-ik/singit-solana/pull/4) also fixes two failures
+reported in Telegram screenshots: a borderline eSIM classification now prompts
+a focused confirmation, and catalog browsing no longer traps new balance
+questions. Checkout fields retain their existing input handling. All 382 plugin
+tests passed in the server runtime. A live TypeSafe harness replayed the exact
+internet, Czech food, gift-card and repeated Base-balance messages with fake
+catalog/wallet handlers. Actual Telegram delivery and catalog availability after
+this fix remain manual checks; no purchases or wallet payments were made.
+
+Fix [`0647997`](https://github.com/bubon-ik/singit-solana/commit/0647997) was then
+deployed to the existing bot after all six GitHub checks passed and a fresh
+private backup was created. Only Telegram restarted; both services are active.
+All 95 Base wallets, the Solana wallet, configuration values and purchase history
+were verified preserved.
+
+### September 21: pending-task context correction
+
+[PR #4](https://github.com/bubon-ik/singit-solana/pull/4) additionally fixes the
+reported US-food conversation: free-form gift-card follow-ups retain the pending
+country/category, and a newly recognized task can interrupt a country question.
+Expired context is not reused; explicit new fields replace previous fields.
+Provider failure preserves pending context and local cancellation rejects late
+classification results. All 391 plugin tests passed in the VPS runtime. Live
+TypeSafe checks with fake catalog/wallet handlers passed the exact reported
+conversation, balance interruption during country clarification, and a country
+name completing an eSIM request. Post-fix Telegram delivery remains a manual
+check; no wallet payment or purchase was made.
+
+Context fix [`b371841`](https://github.com/bubon-ik/singit-solana/commit/b371841)
+was deployed after all six GitHub checks passed. A fresh private backup and
+post-restart comparison verified all 95 Base wallets, the Solana wallet,
+configuration and purchase history intact. Only Telegram restarted; both
+services are active and the payment gateway process stayed unchanged.
+
+### September 21: conversation regression audit
+
+[PR #4](https://github.com/bubon-ik/singit-solana/pull/4) expands the checks from
+reported phrases to browsing/pending-state transitions, cancellation, duplicate
+and delayed messages, expiry and provider failures. Fixes add bounded enum
+context to classification, natural follow-up replies, network clarification,
+short wallet-task interruption of search, explicit all-category changes and
+recovery of cancelled loading screens. Private checkout input stays local.
+
+A repeatable opt-in live classifier harness covers 18 synthetic conversations
+with fake Telegram/catalog/wallet handlers. The first run failed five cases;
+all 18 passed after correction. This is regression coverage, not a guarantee of
+arbitrary-language accuracy or verification of real Telegram delivery. No
+purchase or wallet payment was made. All 414 plugin tests passed in the VPS
+runtime. See the [verification instructions](docs/natural-language-assistant.md#conversation-regression-audit).
+
+Release [`2015199`](https://github.com/bubon-ik/singit-solana/commit/2015199)
+was deployed after all six GitHub checks passed. A fresh private backup and
+post-restart comparison verified preservation of 95 Base wallets, the Solana
+wallet, configuration and purchase history. Only Telegram restarted; both
+services are active and the payment gateway process stayed unchanged.
+
 ## Pending work — not claimed as completed
 
 - Manually verify the deployed wallet commands and refreshed navigation in Telegram.
