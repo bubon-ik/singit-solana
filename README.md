@@ -48,8 +48,8 @@ Next steps and acceptance criteria: [integration plan](docs/solana-integration.m
 
 ## Deployment
 
-The existing VPS bot runs the approved `release/exa-solana-20260922` release
-at `12d8dc0`. See [deployment evidence](docs/exa-solana-chat.md#existing-vps-deployment)
+The existing VPS bot runs the approved `release/exa-auto-search-20260922` release
+at `5be0d7a`. See [deployment evidence](docs/exa-solana-chat.md#existing-vps-deployment)
 and [runtime setup](docs/venice-solana-agent.md). Real funded Exa and Venice
 requests remain user-approved live acceptance steps.
 

@@ -140,6 +140,21 @@ Primary protocol reference: [Exa x402 quickstart](https://exa.ai/docs/integratio
 
 ## Existing VPS deployment
 
+**Current release:** [`5be0d7a`](https://github.com/bubon-ik/singit-solana/commit/5be0d7ab25e23d4be3454d57fde31513c680bd67), deployed September 22 on
+`release/exa-auto-search-20260922`. This adds the model-selected search flow above.
+The VPS runtimes passed all 1,319 gateway, 423 plugin and 52 Solana tests before
+rollout, and all GitHub checks passed for the runtime commit. A private backup,
+quiet-state checks and post-restart verification preserved all 95 Base wallets,
+the Solana wallet, configuration and purchase history. Both services are active;
+unauthenticated search routes return HTTP 401. No paid completion or search was
+made by the deployment checks. Authenticated settings confirmed model-selected
+search, the fresh Exa budget review, search remaining off before consent, a
+signed Venice balance and the native Telegram menu. The original AI network was
+restored, and startup logs contained no tracebacks.
+
+### Earlier Exa rollout
+
+
 Release [`12d8dc0`](https://github.com/bubon-ik/singit-solana/commit/12d8dc004235352262bb5c22fbbb124e8ad72e9b) was deployed to the existing **@SingIt0qk_bot** on
 September 22, 2026, on branch `release/exa-solana-20260922`. The release contains
 the deployed TypeSafe/conversation fixes; it does not replace them with the older

@@ -196,7 +196,12 @@ search keywords, strict control replies, missing consent, expiry/pause between
 stages, original-question/model preservation, receipt retention and refusing a
 second search. Real funded model/search quality evaluation remains pending;
 scripted provider fixtures are not evidence of every model's semantic accuracy.
-Local checks passed: 1,319 gateway tests, 423 plugin tests and 52 Solana Node tests.
+Local and VPS checks passed: 1,319 gateway tests, 423 plugin tests and 52 Solana
+Node tests. Release [`5be0d7a`](https://github.com/bubon-ik/singit-solana/commit/5be0d7ab25e23d4be3454d57fde31513c680bd67) was deployed to the existing bot after
+GitHub checks passed. A private backup and post-restart checks preserved 95 Base
+wallets, the Solana wallet, configuration and history; both services are active.
+Authenticated settings/review, signed Venice balance and native-menu checks
+passed without activating search or spending funds.
 
 ## Pending work — not claimed as completed
 

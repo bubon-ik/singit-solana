@@ -8,12 +8,16 @@ product is, see the [README](../README.md). For incident recovery see
 ## Production layout
 
 **September 22, 2026 update:** the existing bot runs
-[`12d8dc0`](https://github.com/bubon-ik/singit-solana/commit/12d8dc004235352262bb5c22fbbb124e8ad72e9b) on `release/exa-solana-20260922`, adding opt-in Exa search to
-Solana Venice chat while preserving the earlier conversation/TypeSafe release.
-Both services restarted after private backups and quiet payment-state checks.
+[`5be0d7a`](https://github.com/bubon-ik/singit-solana/commit/5be0d7ab25e23d4be3454d57fde31513c680bd67) on `release/exa-auto-search-20260922`. The selected Venice
+model now chooses when a Solana chat question needs Exa, with at most one search
+and two completions. The gateway still enforces the separate approved search
+budget. Source/receipt recovery and prior conversation/TypeSafe fixes remain.
+
+Both services restarted after a private backup and quiet payment-state checks.
 All 95 Base wallets, the Solana wallet, configuration and purchase history were
-verified intact. Search starts off until its separate phone-approved budget is
-active. [Verification and recovery](exa-solana-chat.md#existing-vps-deployment).
+verified intact. Before deployment, 1,319 gateway tests, 423 plugin tests and 52
+Solana Node tests passed in the VPS runtimes; all GitHub checks passed for the
+runtime commit. [Verification and recovery](exa-solana-chat.md#existing-vps-deployment).
 
 ### Earlier deployment records
 
