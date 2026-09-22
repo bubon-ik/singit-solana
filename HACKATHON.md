@@ -162,10 +162,52 @@ post-restart comparison verified preservation of 95 Base wallets, the Solana
 wallet, configuration and purchase history. Only Telegram restarted; both
 services are active and the payment gateway process stayed unchanged.
 
+### September 22: Exa search for Solana Venice chat
+
+[PR #5](https://github.com/bubon-ik/singit-solana/pull/5) extends the current conversation release with a fixed
+Exa x402 v2 search adapter, per-user Solana signing, a separately approved search
+budget, durable payment holds/recovery, source links and a separate cost/receipt
+in the selected Venice model's answer. Base search behavior is retained.
+
+The exact unpaid request returned HTTP 402 with a 0.007-USDC Solana option and
+sponsored fees. Offline tests cover consent, limits, concurrency and recovery;
+the full SVM fixture uses real transaction signatures against local providers.
+Local checks passed: 1,309 gateway tests, 422 plugin tests and 49 Solana Node
+tests. No real Exa payment or paid Venice answer was sent. See the
+[feature record](docs/exa-solana-chat.md) for limits and verification.
+
+Release [`12d8dc0`](https://github.com/bubon-ik/singit-solana/commit/12d8dc004235352262bb5c22fbbb124e8ad72e9b) was deployed to the existing bot after all seven
+GitHub checks and the full VPS test suites passed. A private backup and post-restart
+checks preserved 95 Base wallets, the Solana wallet, configuration and history.
+Authenticated Exa review and signed Venice balance checks passed; search stayed
+off and no real payment was made. [Deployment evidence](docs/exa-solana-chat.md#existing-vps-deployment).
+
+### September 22: model-selected Solana web search
+
+[PR #5](https://github.com/bubon-ik/singit-solana/pull/5) adds semantic search
+selection by the user's chosen Venice model. Its first completion either answers
+or requests one Exa query; the final completion receives the original question
+and retrieved sources. Search no longer depends on freshness keywords. The
+separate standing budget, payer/merchant binding, durable holds and one-search
+limit remain enforced by the gateway. Both model completions use Venice credit.
+
+Offline coverage includes implicit research questions, translations containing
+search keywords, strict control replies, missing consent, expiry/pause between
+stages, original-question/model preservation, receipt retention and refusing a
+second search. Real funded model/search quality evaluation remains pending;
+scripted provider fixtures are not evidence of every model's semantic accuracy.
+Local and VPS checks passed: 1,319 gateway tests, 423 plugin tests and 52 Solana
+Node tests. Release [`5be0d7a`](https://github.com/bubon-ik/singit-solana/commit/5be0d7ab25e23d4be3454d57fde31513c680bd67) was deployed to the existing bot after
+GitHub checks passed. A private backup and post-restart checks preserved 95 Base
+wallets, the Solana wallet, configuration and history; both services are active.
+Authenticated settings/review, signed Venice balance and native-menu checks
+passed without activating search or spending funds.
+
 ## Pending work — not claimed as completed
 
 - Manually verify the deployed wallet commands and refreshed navigation in Telegram.
 - A real mainnet Venice payment and paid response through the agent.
+- A real Exa search paid through the Solana agent and its sourced Venice response.
 - Integration of the verified Bitrefill Solana route into the per-user agent, approvals and durable recovery.
 - A custom x402 stock-purchase endpoint.
 

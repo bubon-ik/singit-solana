@@ -69,7 +69,7 @@ class SolanaBridge:
                 timeout=240, check=False)
             response = json.loads(process.stdout)
         except Exception:
-            raise SolanaChatError('BRIDGE_UNAVAILABLE', 'Could not complete the Venice request. Check payment status before trying another top-up.') from None
+            raise SolanaChatError('BRIDGE_UNAVAILABLE', 'Could not complete the Exa request. Check search payment status before trying again.' if operation.startswith('exa-') else 'Could not complete the Venice request. Check payment status before trying another top-up.') from None
         finally:
             request.pop('privateKey', None)
             key = None
@@ -83,7 +83,13 @@ class SolanaBridge:
                 'PAYMENT_UNCERTAIN': 'The payment result is uncertain. Check payment status; do not pay again.',
                 'TRANSACTION_REQUIRED': 'No transaction receipt is available yet. Contact support with the quote ID; do not pay again.',
             }
-            raise SolanaChatError(str(code), messages.get(code, 'Venice could not complete this request. No automatic retry was made.'))
+            if operation.startswith('exa-'):
+                messages.update(EXA_RATE_LIMIT='Exa is rate limited. Try again later; no search was submitted.',
+                    EXA_PAYMENT_UNCERTAIN='Search payment is uncertain. Check search payment status; do not pay again.',
+                    EXA_PAYMENT_PENDING='Check your pending search payment before searching again.',
+                    TRANSACTION_REQUIRED='No search receipt is available yet. Contact support with the search ID; do not pay again.')
+            fallback = 'Exa could not complete this request. Check search payment status; no automatic retry was made.' if operation.startswith('exa-') else 'Venice could not complete this request. No automatic retry was made.'
+            raise SolanaChatError(str(code), messages.get(code, fallback))
         return response['result']
 
 
@@ -94,6 +100,7 @@ class SolanaChatService:
         self.now, self.purchases_paused = now, purchases_paused
         self.default_model = default_model
         self.enabled = True
+        self.search = None
         self.catalogue = ChatService(store=store, client=None, wallet_service=wallets,
             daily_cap_atomic=5_000_000, default_model=default_model, catalogue=catalogue)
         self._locks = [threading.Lock() for _ in range(256)]
@@ -143,6 +150,10 @@ class SolanaChatService:
                     return self.catalogue.models(user_id, category=str(payload.get('category') or ''), query=str(payload.get('query') or ''), page=int(payload.get('page') or 0))
                 if operation == 'payment':
                     return self.reconcile(user_id, str(payload.get('quoteId') or ''), str(payload.get('transaction') or ''))
+                if operation.startswith('search'):
+                    if self.search is None:
+                        raise SolanaChatError('EXA_DISABLED', 'Solana web search is unavailable.')
+                    return self.search.handle(operation, user_id, payload)
                 self._paid_allowed()
                 if operation == 'approve-policy':
                     return self.approve_policy(user_id, payload)
@@ -188,7 +199,8 @@ class SolanaChatService:
                 'outstandingUsdc': usd(user['credit']), 'creditFresh': balance_known,
                 'policyExpiresAt': user['expires'], 'policyExpired': bool(user['expires'] and user['expires'] <= self.now()),
                 'paused': bool(pending), 'pauseReason': 'Check your pending Solana payment.' if pending else '',
-                'pendingQuoteId': pending['id'] if pending else None}
+                'pendingQuoteId': pending['id'] if pending else None,
+                'webSearch': self.search.status(user_id) if self.search else None}
 
     def approve_policy(self, user_id, payload):
         cap, days = int(payload.get('dailyCapAtomic') or 0), int(payload.get('days') or 0)
@@ -313,13 +325,12 @@ class SolanaChatService:
         text += '\nThis top-up was already credited. Send a question or review a new top-up if the credit has been used.' if previously_credited else '\nCredit is ready. Send your question.' if ready else '\nCheck payment status again. Do not submit another top-up.' if state != 'failed' else '\nPayment failed on-chain; no top-up was recorded.'
         return {'ok': True, 'chain': 'solana', 'paymentState': state, 'creditReady': ready, 'transaction': result.get('transaction'), 'telegramText': text}
 
-    def send(self, user_id, text):
-        if not text.strip() or len(text) > 12000:
-            raise SolanaChatError('INVALID_MESSAGE', 'Send a question of up to 12,000 characters.')
-        user = self._budget(user_id)
-        if self.store.latest(user_id, active=True):
-            raise SolanaChatError('PAYMENT_PENDING', 'Check your pending top-up before using Solana AI chat.')
-        result = self._call(user_id, 'chat', model=user['model'] or self.default_model, message=text)
+    def _complete(self, user_id, model, text, **options):
+        # Each completion can spend Venice credit. Recheck before the second
+        # one as well; record the decision's balance even if search is refused.
+        self._paid_allowed()
+        self._budget(user_id)
+        result = self._call(user_id, 'chat', model=model, message=text, **options)
         credit = None
         try:
             if result.get('balanceRemaining') is not None:
@@ -327,8 +338,52 @@ class SolanaChatService:
         except SolanaChatError:
             pass
         self.store.credit(user_id, credit)
+        return dict(result, credit=credit)
+
+    @staticmethod
+    def _answer(result, **web):
         return {'ok': True, 'chain': 'solana', 'text': result['text'], 'costAtomic': None,
-                'outstandingAtomic': credit, 'model': result.get('model'), 'prefunded': False}
+                'outstandingAtomic': result.get('credit'), 'model': result.get('model'),
+                'prefunded': False, **web}
+
+    def send(self, user_id, text):
+        if not text.strip() or len(text) > 12000:
+            raise SolanaChatError('INVALID_MESSAGE', 'Send a question of up to 12,000 characters.')
+        user = self._budget(user_id)
+        if self.store.latest(user_id, active=True):
+            raise SolanaChatError('PAYMENT_PENDING', 'Check your pending top-up before using Solana AI chat.')
+        model = user['model'] or self.default_model
+        first = self._complete(user_id, model, text, **({'offerSearch': True} if self.search else {}))
+        if not self.search:
+            return self._answer(first)
+        from .solana_search import requested_search
+        try:
+            query = requested_search(first['text'])
+            if query is None:
+                return self._answer(first)
+            self._budget(user_id)
+            web = self.search.search(user_id, query)
+        except SolanaChatError as error:
+            # A model decision is a paid completion even if search never starts.
+            credit = first['credit']
+            note = f'Venice credit left: ${usd(credit)}.' if credit is not None else 'Venice credit balance is unavailable.'
+            return {'ok': False, 'chain': 'solana', 'state': error.code,
+                    'outstandingAtomic': credit,
+                    'telegramText': error.text + '\n\nThe model’s search decision uses Venice credit. ' + note}
+        if not web['sources']:
+            return self._answer(dict(first, text='Exa returned no usable sources for this question. The search was charged; no further Venice answer was requested.'), **web)
+        try:
+            final = self._complete(user_id, model, text, sources=web['sources'])
+        except SolanaChatError:
+            # Preserve the paid results/receipt if completion or policy fails.
+            return self._answer({'text': 'Exa search completed, but Venice could not answer. The search was charged. No automatic retry was made.'}, **web)
+        try:
+            another_search = requested_search(final['text']) is not None
+        except SolanaChatError:
+            another_search = True
+        if another_search:
+            final['text'] = 'The retrieved sources were insufficient for the model to answer. See the sources below. No second search was purchased.'
+        return self._answer(final, **web)
 
 
 def build_solana_chat(*, wallets, approvals, base_chat, purchases_paused):
@@ -340,5 +395,9 @@ def build_solana_chat(*, wallets, approvals, base_chat, purchases_paused):
         default_model=base_chat.default_model if base_chat else DEFAULT_MODEL,
         purchases_paused=purchases_paused)
 
+    from .solana_search import SolanaSearch
+    service.search = SolanaSearch(service, enabled=(
+        os.environ.get('SIGN402_AI_SEARCH_ENABLED', '0').strip().lower() in {'1', 'true', 'on'} and
+        os.environ.get('SIGN402_SOLANA_SEARCH_ENABLED', '1').strip().lower() not in {'0', 'false', 'off'}))
     service.enabled = os.environ.get("SIGN402_SOLANA_CHAT_ENABLED", "1").strip().lower() not in {"0", "false", "off"}
     return service

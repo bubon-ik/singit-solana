@@ -12,6 +12,7 @@ See [HACKATHON.md](HACKATHON.md) for the existing SingIt foundation, recorded So
 - The full agent code has been imported from the committed `main` branch.
 - The Venice/x402 client for Solana mainnet lives in `solana-x402-service/`.
 - **The agent supports managed Solana wallets and Venice chat with exact-quote phone approval for x402 top-ups.** [Flow, recovery and verification](docs/venice-solana-agent.md).
+- **Opt-in Exa web search is integrated with Solana Venice chat**, with model-selected search, a separate phone-approved budget, numbered sources and a payment receipt. [Flow and verification](docs/exa-solana-chat.md). A funded Exa payment remains unverified.
 - A real Bitrefill purchase was completed with USDC on Solana: [Alza CZ 200 CZK, live verification](docs/bitrefill-solana-checks.md). This was an operator-assisted run; agent purchasing integration remains pending.
 - Native Telegram navigation, inline shopping controls and private purchase history are implemented: [UI checks and limitations](docs/telegram-ui-checks.md). The navigation update is deployed to the existing bot.
 - No real Venice top-up or paid Venice model request has been completed.
@@ -47,9 +48,10 @@ Next steps and acceptance criteria: [integration plan](docs/solana-integration.m
 
 ## Deployment
 
-The existing VPS bot runs the approved `venice-solana` release. See
-[deployment evidence and runtime setup](docs/venice-solana-agent.md). A real
-Venice top-up and paid Solana answer remain the next live acceptance step.
+The existing VPS bot runs the approved `release/exa-auto-search-20260922` release
+at `5be0d7a`. See [deployment evidence](docs/exa-solana-chat.md#existing-vps-deployment)
+and [runtime setup](docs/venice-solana-agent.md). Real funded Exa and Venice
+requests remain user-approved live acceptance steps.
 
 Before starting a separate Telegram agent, configure its own bot token,
 encryption key, wallet and operation databases, ports, and runtime directories.
